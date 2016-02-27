@@ -3,7 +3,7 @@ import re
 import urllib.request
 import sys
 import csv
-
+START = 7626
 START = 7360
 END = 49933
 
@@ -50,12 +50,14 @@ title = ""
 ministry = ""
 branch = ""
 
-row = ["Name", "Phone", "Fax", "Email", "URL", "Title", "Ministry", "Branch", "Address"]
+row = ["Name", "Phone", "Fax", "Email", "URL", "Title", "Ministry", "Branch", "Address", "URL", "No."]
 with open('output.csv', 'a', newline='') as fp:
 	a = csv.writer(fp, delimiter=',')
 	a.writerow(row)
 
+
 for i in range(START, END): 
+	# my_print(str(i - START) + "\n")
 	title = ministry = branch = name = phone = fax = email = url = address = attributes = "-"
 	url = "http://www.infogo.gov.on.ca/infogo/employee.do?actionType=browse&id=" + str(i) + "&infoType=telephone&locale=en"
 	response = urllib.request.urlopen(url)
@@ -64,7 +66,9 @@ for i in range(START, END):
 	result = re.search(r'.*Phone:&nbsp;\s*(.*)$', input, re.DOTALL)
 	if result is not None: 
 		soup = BeautifulSoup(result.group(1), "html.parser")
-		phone = (soup.select(".bodycontext")[0]).contents[0].encode('utf-8', 'ignore').decode('ascii', 'ignore')
+		print(soup.select(".bodycontext")[0])
+		if(len(soup.select(".bodycontext")[0].contents) is not 0): 
+			phone = (soup.select(".bodycontext")[0]).contents[0].encode('utf-8', 'ignore').decode('ascii', 'ignore')
 #NAME
 		soup = BeautifulSoup(input, "html.parser")
 		name = (soup.select("b")[0]).contents[0].encode('utf-8', 'ignore').decode('ascii', 'ignore')
@@ -116,7 +120,7 @@ for i in range(START, END):
 				if len(addressSelector) >  addressSize + 2: 
 					address  = address + ((addressSelector[addressSize + 2]).contents[0]).encode('utf-8', 'ignore').decode('ascii', 'ignore')+ "\n" 
 			# my_print("Address: " + address)
-			row = [name, phone, fax, email, website, title, ministry, branch, address[:-2]]
+			row = [name, phone, fax, email, website, title, ministry, branch, address[:-2], url, str(i)]
 			with open('output.csv', 'a', newline='') as fp:
 				a = csv.writer(fp, delimiter=',')
 				a.writerow(row)
