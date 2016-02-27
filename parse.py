@@ -4,8 +4,24 @@ import urllib.request
 from bs4 import BeautifulSoup
 import csv
 import sys
+import re
 
-PRINT_FLAG = False
+NAME_POSITION = None
+PHONE_POSITION = {'x': 0, 'y': 0}
+FAX_POSITION = {'x': 1, 'y': 0}
+EMAIL_POSITION = {'x': 2, 'y': 0}
+URL_POSITION = {'x': 0, 'y': 0}
+ADDRESS_START_POSITION = {'x': 5, 'y': 0}
+
+NAME_EXISTS = True
+PHONE_EXISTS = True
+FAX_EXISTS = True
+EMAIL_EXISTS = True
+URL_EXISTS = True
+POSITION_EXISTS = True
+ADDRESS_EXISTS = True
+
+PRINT_FLAG = True
 
 if len(sys.argv) > 1 and sys.argv[1] == '1':
 	PRINT_FLAG = True
@@ -13,17 +29,19 @@ if len(sys.argv) > 1 and sys.argv[1] == '1':
 
 
 rows = []
-row = ['Name', 'Phone', 'Email', 'Attributes', 'Address', 'Comments', 'URL']
+row = ['Name', 'Phone', 'Fax',  'Email', 'Attributes', 'Address', 'Comments', 'URL']
 
 with open('test.csv', 'a', newline='') as fp:
 	a = csv.writer(fp, delimiter=',')
 	a.writerow(row)
-
+START = 7360
+END = 49933
+# END = 7361
 rows.append(row)
 # 7,360
 # 49,933
 # r = urllib.request.urlopen("http://www.infogo.gov.on.ca/infogo/employee.do?actionType=browse&id=7360&infoType=telephone&locale=en").read()
-for i in range(7360, 49933):
+for i in range(START, END):
 	url = "http://www.infogo.gov.on.ca/infogo/employee.do?actionType=browse&id=" + str(i) + "&infoType=telephone&locale=en"
 	#if PRINT_FLAG == 1:
 	#	print(i) 
@@ -44,37 +62,57 @@ for i in range(7360, 49933):
 
 		name = (soup.select("b")[0]).contents[0].encode('utf-8', 'ignore').decode('ascii', 'ignore')
 
+		bodyContextSelector = soup.select(".bodycontext")
+#PHONE
 		phone = ""
-		phoneSelector = soup.select(".bodycontext")
-		if len(phoneSelector) > 0 and len(phoneSelector[0].contents) > 0:
-			phone = (phoneSelector[0]).contents[0].encode('utf-8', 'ignore').decode('ascii', 'ignore')
-		else: 
-			comments = comments + "No phone"
 
-		email = ""
-		emailSelector = soup.select(".bodycontext")
-		if len(emailSelector) > 2 and len(emailSelector[2].contents) > 0 :
-			email  = (emailSelector[2]).contents[0].encode('utf-8', 'ignore').decode('ascii', 'ignore')
+		if len(bodyContextSelector) > 0 and len(bodyContextSelector[0].contents) > 0 and  re.search('(\d{3}[-\.\s]??\d{3}[-\.\s]??\d{4}|\(\d{3}\)\s*\d{3}[-\.\s]??\d{4}|\d{3}[-\.\s]??\d{4})',(bodyContextSelector[PHONE_POSITION['x']]).contents[PHONE_POSITION['y']].encode('utf-8', 'ignore').decode('ascii', 'ignore') , 0) is not None:
+			phone = (bodyContextSelector[PHONE_POSITION['x']]).contents[PHONE_POSITION['y']].encode('utf-8', 'ignore').decode('ascii', 'ignore')
 		else: 
+			comments = comments + "No phone\t"
+		fax = ""
+
+		# print("FAX: " + (bodyContextSelector[1]).contents[0].encode('utf-8', 'ignore').decode('ascii', 'ignore'))
+#FAX
+		if len(bodyContextSelector) > 0 and len(bodyContextSelector[FAX_POSITION['x']].contents) > FAX_POSITION['y'] and  re.search('(\d{3}[-\.\s]??\d{3}[-\.\s]??\d{4}|\(\d{3}\)\s*\d{3}[-\.\s]??\d{4}|\d{3}[-\.\s]??\d{4})',(bodyContextSelector[FAX_POSITION['x']]).contents[FAX_POSITION['y']].encode('utf-8', 'ignore').decode('ascii', 'ignore') , 0) is not None:
+			fax = (bodyContextSelector[FAX_POSITION['x']]).contents[FAX_POSITION['y']].encode('utf-8', 'ignore').decode('ascii', 'ignore')
+			print (fax)
+		else:
+			FAX_EXISTS = False
+			comments = comments + "No fax\t"
+			EMAIL_POSITION['x'] = FAX_POSITION['x'] + 1
+			EMAIL_POSITION['y'] = FAX_POSITION['y']
+			# ADDRESS_START_POSITION['y'] = ADDRESS_START_POSITION['y'] - 1
+			print (fax)
+		email = ""
+#EMAIL		
+		if len(bodyContextSelector) > 2 and len(bodyContextSelector[EMAIL_POSITION['x']].contents) > 0 and  re.search('[^@]+@[^@]+\.[^@]+',(bodyContextSelector[EMAIL_POSITION['x']]).contents[EMAIL_POSITION['y']].encode('utf-8', 'ignore').decode('ascii', 'ignore') , 0) is not None:
+			email  = (bodyContextSelector[EMAIL_POSITION['x']]).contents[EMAIL_POSITION['y']].encode('utf-8', 'ignore').decode('ascii', 'ignore')
+		elif FAX_EXISTS == True:
+			EMAIL_POSITION['x'] = EMAIL_POSITION['x'] + 1
+			email  = (bodyContextSelector[EMAIL_POSITION['x']]).contents[EMAIL_POSITION['y']].encode('utf-8', 'ignore').decode('ascii', 'ignore')
+			ADDRESS_START_POSITION['y']  = ADDRESS_START_POSITION['y'] -1
+		else : 
 			comments = comments + ", No email"
 
-		attributes = (soup.select(".bodycontext")[4]).contents[0].encode('utf-8', 'ignore').decode('ascii', 'ignore')
 
+		attributes = (soup.select(".bodycontext")[4]).contents[0].encode('utf-8', 'ignore').decode('ascii', 'ignore')
+#ADDRESS
 		address = ""
 		address1Selector = soup.select(".bodycontext")
-		if len(address1Selector) > 5 : 
-			address  = address + ((address1Selector[5]).contents[0]).encode('utf-8', 'ignore').decode('ascii', 'ignore')
+		if len(address1Selector) > ADDRESS_START_POSITION['x'] : 
+			address  = address + ((address1Selector[ADDRESS_START_POSITION['x']]).contents[ADDRESS_START_POSITION['y']]).encode('utf-8', 'ignore').decode('ascii', 'ignore')
 		
 		address2Selector = soup.select(".bodycontext")
-		if len(address2Selector) > 6 : 
-			address  = address + ", " + ((address2Selector[6]).contents[0]).encode('utf-8', 'ignore').decode('ascii', 'ignore')
+		if len(address2Selector) > ADDRESS_START_POSITION['x'] + 1: 
+			address  = address + ", " + ((address2Selector[ADDRESS_START_POSITION['x'] + 1]).contents[0]).encode('utf-8', 'ignore').decode('ascii', 'ignore')
 		# print(len(soup.select(".bodycontext")))
 		address3Selector = soup.select(".bodycontext")
-		if len(address3Selector) > 7 : 
-			address = address  + ", " + ((address3Selector[7]).contents[0]).encode('utf-8', 'ignore').decode('ascii', 'ignore')
+		if len(address3Selector) > ADDRESS_START_POSITION['x'] + 2 : 
+			address = address  + ", " + ((address3Selector[ADDRESS_START_POSITION['x'] + 2]).contents[0]).encode('utf-8', 'ignore').decode('ascii', 'ignore')
 		address4Selector = soup.select(".bodycontext")
-		if len(address4Selector) > 8 : 
-			address = address + ", " + ((address4Selector[8]).contents[0]).encode('utf-8', 'ignore').decode('ascii', 'ignore')
+		if len(address4Selector) > ADDRESS_START_POSITION['x'] + 3: 
+			address = address + ", " + ((address4Selector[ADDRESS_START_POSITION['x'] + 3]).contents[0]).encode('utf-8', 'ignore').decode('ascii', 'ignore')
 
 		# address_3 = ((soup.select(".bodycontext")[7]).contents[0]).encode('utf-8', 'ignore').decode('ascii', 'ignore')
 
@@ -83,7 +121,7 @@ for i in range(7360, 49933):
 
 
 		# address = address_1 + ", " + address_2 + ", " + "address_3" + ", " + "address_4"
-		row = [name, phone, email, attributes, address, comments, url]
+		row = [name, phone, fax, email, attributes, address, comments, url]
 		if PRINT_FLAG == 1: 
 			print(row)
 		# rows.append(row)
