@@ -4,8 +4,18 @@ import urllib.request
 import sys
 import csv
 START = 7626
-START = 7360
+# START = 7360
+START = 32060
 END = 49933
+
+START = 49932
+END = 55000
+
+START = 7358
+END = 7360
+
+UNIT_START = 2
+UNIT_END = 7356
 
 ADDRESS_SIZE_START = 0
 ADDRESS_SIZE_END = 6
@@ -58,7 +68,7 @@ with open('output.csv', 'a', newline='') as fp:
 
 for i in range(START, END): 
 	# my_print(str(i - START) + "\n")
-	title = ministry = branch = name = phone = fax = email = url = address = attributes = "-"
+	title = ministry = branch = name = phone = fax = email = url = website  =  address = attributes = "-"
 	url = "http://www.infogo.gov.on.ca/infogo/employee.do?actionType=browse&id=" + str(i) + "&infoType=telephone&locale=en"
 	response = urllib.request.urlopen(url)
 	input = str(response.read().decode('UTF-8', 'ignore'))
@@ -66,7 +76,7 @@ for i in range(START, END):
 	result = re.search(r'.*Phone:&nbsp;\s*(.*)$', input, re.DOTALL)
 	if result is not None: 
 		soup = BeautifulSoup(result.group(1), "html.parser")
-		print(soup.select(".bodycontext")[0])
+		# print(soup.select(".bodycontext")[0])
 		if(len(soup.select(".bodycontext")[0].contents) is not 0): 
 			phone = (soup.select(".bodycontext")[0]).contents[0].encode('utf-8', 'ignore').decode('ascii', 'ignore')
 #NAME

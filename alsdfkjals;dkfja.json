@@ -1,0 +1,13 @@
+People Dictionary
+{
+	Organization: 
+		{
+			data: {name, address,.... }
+			parents: [parent1, parent2, .... ]
+		}
+}
+
+Organization Dictionary
+{
+	Organization: row: [parent1, parent2, .... ]
+}
